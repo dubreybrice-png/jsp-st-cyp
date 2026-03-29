@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<style>
+/* ═══════════════════════════════════════════════════════
+   VARIABLES & RESET
+   ═══════════════════════════════════════════════════════ */
+:root {
+  --primary:#dc2626; --primary-dark:#991b1b; --accent:#2563eb; --accent-light:#dbeafe;
+  --bg:#f1f5f9; --card:#ffffff; --text:#1e293b; --text-light:#64748b;
+  --border:#e2e8f0; --success:#16a34a; --warning:#ea580c; --danger:#dc2626;
+  --radius:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+button{cursor:pointer;font-family:inherit;}
+input,select,textarea{font-family:inherit;}
+
+/* ═══════════════════════════════════════════════════════
+   LOADER
+   ═══════════════════════════════════════════════════════ */
+#loader{position:fixed;inset:0;background:rgba(255,255,255,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity .3s;}
+#loader.hidden{opacity:0;pointer-events:none;}
+.spinner{width:48px;height:48px;border:4px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#loader span{margin-top:12px;font-size:.9em;color:var(--text-light);}
+
+/* ═══════════════════════════════════════════════════════
+   LOGIN VIEW
+   ═══════════════════════════════════════════════════════ */
+.login-view{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
+.login-card{background:var(--card);border-radius:20px;padding:50px 40px;box-shadow:0 8px 40px rgba(0,0,0,.1);text-align:center;max-width:440px;width:100%;}
+.login-card h1{font-size:2em;margin-bottom:6px;}
+.login-card .subtitle{color:var(--text-light);margin-bottom:30px;font-size:.95em;}
+.login-choice{display:flex;flex-direction:column;gap:14px;}
+.btn-jsp,.btn-ref{padding:18px 24px;border:none;border-radius:var(--radius);font-size:1.1em;font-weight:700;color:#fff;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px;}
+.btn-jsp{background:var(--primary);}
+.btn-jsp:hover{background:var(--primary-dark);transform:translateY(-2px);box-shadow:0 4px 16px rgba(220,38,38,.3);}
+.btn-ref{background:var(--accent);}
+.btn-ref:hover{background:#1d4ed8;transform:translateY(-2px);box-shadow:0 4px 16px rgba(37,99,235,.3);}
+.login-form{display:none;margin-top:20px;}
+.login-form h2{font-size:1.15em;margin-bottom:16px;color:var(--text);}
+.login-form input{width:100%;padding:14px 16px;border:2px solid var(--border);border-radius:10px;font-size:1em;margin-bottom:10px;transition:border .2s;}
+.login-form input:focus{border-color:var(--accent);outline:none;}
+.login-form .btn-submit{width:100%;padding:14px;border:none;border-radius:10px;background:var(--accent);color:#fff;font-size:1.05em;font-weight:700;margin-top:6px;transition:background .2s;}
+.login-form .btn-submit:hover{background:#1d4ed8;}
+.login-form .btn-back{width:100%;padding:10px;border:2px solid var(--border);border-radius:10px;background:transparent;color:var(--text-light);font-size:.9em;margin-top:8px;transition:all .2s;}
+.login-form .btn-back:hover{border-color:var(--text-light);color:var(--text);}
+.login-error{color:var(--danger);font-size:.9em;margin-top:10px;min-height:20px;}
+
+/* ═══════════════════════════════════════════════════════
+   TOP BAR
+   ═══════════════════════════════════════════════════════ */
+.top-bar{background:linear-gradient(135deg,var(--primary),#b91c1c);color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;box-shadow:0 2px 12px rgba(0,0,0,.15);}
+.top-bar .welcome{font-weight:700;font-size:1.05em;}
+.top-bar .actions{display:flex;gap:8px;flex-wrap:wrap;}
+.top-bar button{padding:8px 16px;border:2px solid rgba(255,255,255,.3);border-radius:8px;background:rgba(255,255,255,.1);color:#fff;font-size:.85em;font-weight:600;transition:all .2s;}
+.top-bar button:hover{background:rgba(255,255,255,.25);border-color:rgba(255,255,255,.5);}
+
+/* ═══════════════════════════════════════════════════════
+   STATS BAR
+   ═══════════════════════════════════════════════════════ */
+.stats-bar{display:flex;flex-wrap:wrap;gap:12px;padding:20px 24px;}
+.stat-card{flex:1;min-width:140px;background:var(--card);border-radius:var(--radius);padding:16px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.06);border-top:4px solid var(--border);}
+.stat-card.red{border-top-color:var(--danger);}
+.stat-card.orange{border-top-color:var(--warning);}
+.stat-card.green{border-top-color:var(--success);}
+.stat-card.blue{border-top-color:var(--accent);}
+.stat-val{font-size:1.8em;font-weight:800;line-height:1.1;}
+.stat-label{font-size:.78em;color:var(--text-light);margin-top:4px;}
+
+/* ═══════════════════════════════════════════════════════
+   CALENDAR
+   ═══════════════════════════════════════════════════════ */
+.cal-container{padding:20px 24px;display:flex;align-items:flex-start;justify-content:center;gap:12px;flex-wrap:wrap;}
+.cal-nav{align-self:center;width:42px;height:42px;border:2px solid var(--border);border-radius:50%;background:var(--card);color:var(--text);font-size:1.2em;font-weight:700;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;}
+.cal-nav:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+.cal-big,.cal-small{background:var(--card);border-radius:var(--radius);box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden;}
+.cal-big{min-width:340px;max-width:520px;flex:2;}
+.cal-small{min-width:180px;max-width:240px;flex:1;opacity:.85;}
+.cal-title{text-align:center;font-weight:800;padding:14px;font-size:1.1em;background:var(--text);color:#fff;}
+.cal-small .cal-title{padding:10px;font-size:.85em;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);}
+.cal-day-header{text-align:center;padding:8px 2px;font-weight:700;font-size:.75em;color:var(--text-light);background:var(--bg);}
+.cal-small .cal-day-header{padding:5px 1px;font-size:.65em;}
+.cal-cell{text-align:center;padding:10px 4px;min-height:52px;cursor:default;border:1px solid transparent;transition:all .15s;position:relative;}
+.cal-small .cal-cell{padding:5px 2px;min-height:32px;font-size:.8em;}
+.cal-cell.empty{background:transparent;}
+.cal-cell:not(.empty):hover{background:var(--accent-light);border-radius:8px;}
+.cal-cell.today .cal-num{background:var(--primary);color:#fff;border-radius:50%;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;}
+.cal-small .cal-cell.today .cal-num{width:22px;height:22px;font-size:.75em;}
+.cal-num{font-weight:600;font-size:.9em;}
+.cal-dot{display:block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin:3px auto 0;box-shadow:0 0 6px rgba(37,99,235,.4);}
+.cal-small .cal-dot{width:5px;height:5px;margin-top:1px;}
+.cal-cell.has-event{cursor:pointer;}
+/* Tooltip au survol calendrier */
+.cal-cell .cal-tooltip{display:none;position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:8px 12px;border-radius:8px;font-size:.75em;white-space:nowrap;z-index:50;box-shadow:0 4px 12px rgba(0,0,0,.2);pointer-events:none;}
+.cal-cell .cal-tooltip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--text);}
+.cal-cell:hover .cal-tooltip{display:block;}
+
+/* ═══════════════════════════════════════════════════════
+   MODAL
+   ═══════════════════════════════════════════════════════ */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;backdrop-filter:blur(3px);}
+.modal-content{background:var(--card);border-radius:16px;padding:30px;max-width:520px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 12px 48px rgba(0,0,0,.2);animation:modalIn .25s ease-out;}
+@keyframes modalIn{from{opacity:0;transform:scale(.95)translateY(10px);}to{opacity:1;transform:scale(1)translateY(0);}}
+.modal-content h2{margin-bottom:16px;font-size:1.2em;}
+.modal-content .modal-close{float:right;border:none;background:none;font-size:1.5em;color:var(--text-light);cursor:pointer;line-height:1;}
+.modal-content .modal-close:hover{color:var(--danger);}
+.modal-field{margin-bottom:12px;}
+.modal-field label{display:block;font-weight:600;font-size:.85em;margin-bottom:4px;color:var(--text);}
+.modal-field input,.modal-field textarea,.modal-field select{width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:8px;font-size:.95em;}
+.modal-field input:focus,.modal-field textarea:focus{border-color:var(--accent);outline:none;}
+.modal-field textarea{resize:vertical;min-height:80px;}
+.modal-sections{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;}
+.modal-sections label{display:flex;align-items:center;gap:5px;font-size:.9em;padding:6px 12px;border:2px solid var(--border);border-radius:8px;cursor:pointer;transition:all .2s;}
+.modal-sections label:has(input:checked){background:var(--accent-light);border-color:var(--accent);color:var(--accent);font-weight:600;}
+.modal-sections input[type=checkbox]{accent-color:var(--accent);}
+.modal-btn{padding:12px 24px;border:none;border-radius:10px;font-size:.95em;font-weight:700;cursor:pointer;transition:all .2s;margin-top:6px;margin-right:8px;}
+.modal-btn.primary{background:var(--accent);color:#fff;}
+.modal-btn.primary:hover{background:#1d4ed8;}
+.modal-btn.danger{background:var(--danger);color:#fff;}
+.modal-btn.danger:hover{background:var(--primary-dark);}
+.modal-btn.secondary{background:transparent;border:2px solid var(--border);color:var(--text-light);}
+.modal-btn.secondary:hover{border-color:var(--text-light);color:var(--text);}
+.modal-btn.success{background:var(--success);color:#fff;}
+.modal-btn.success:hover{background:#15803d;}
+
+/* Event card in modal */
+.evt-card{background:var(--bg);border-radius:10px;padding:14px;margin-bottom:12px;border-left:4px solid var(--accent);}
+.evt-card h3{margin-bottom:6px;font-size:1.05em;}
+.evt-card .evt-detail{font-size:.85em;color:var(--text-light);line-height:1.6;}
+
+/* Attendance list */
+.att-list{max-height:50vh;overflow-y:auto;}
+.att-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);transition:background .15s;}
+.att-item:hover{background:var(--bg);}
+.att-item input[type=checkbox]{width:20px;height:20px;accent-color:var(--success);}
+.att-item .att-name{flex:1;font-weight:600;}
+.att-item .att-section{font-size:.8em;color:var(--text-light);background:var(--bg);padding:3px 8px;border-radius:6px;}
+.att-item .att-signale{font-size:.75em;color:var(--warning);font-weight:600;}
+
+/* ═══════════════════════════════════════════════════════
+   BILAN PANEL
+   ═══════════════════════════════════════════════════════ */
+.bilan-panel{padding:20px 24px;}
+.bilan-panel h2{margin-bottom:16px;}
+.bilan-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+.bilan-tabs button{padding:10px 20px;border:2px solid var(--border);border-radius:10px;background:var(--card);color:var(--text);font-size:.9em;font-weight:600;transition:all .2s;}
+.bilan-tabs button.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.bilan-tabs button:hover:not(.active){background:var(--accent-light);}
+.bilan-table-wrap{overflow-x:auto;}
+.bilan-table{width:100%;border-collapse:collapse;font-size:.85em;}
+.bilan-table th,.bilan-table td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);}
+.bilan-table th{background:var(--text);color:#fff;font-weight:700;cursor:pointer;user-select:none;white-space:nowrap;position:sticky;top:0;z-index:2;}
+.bilan-table th:hover{background:#334155;}
+.bilan-table th .sort-arrow{font-size:.7em;margin-left:4px;opacity:.5;}
+.bilan-table th.sorted .sort-arrow{opacity:1;color:#fbbf24;}
+.bilan-table tr:hover td{background:var(--bg);}
+.bilan-table .val-abs{color:var(--danger);font-weight:700;}
+.bilan-table .val-pres{color:var(--success);font-weight:700;}
+.bilan-table .val-taux{font-weight:800;}
+.bilan-back{margin-bottom:16px;}
+
+/* ═══════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════ */
+@media(max-width:768px){
+  .cal-small{display:none;}
+  .cal-big{max-width:100%;min-width:auto;}
+  .stats-bar{gap:8px;padding:12px;}
+  .stat-card{min-width:100px;padding:10px;}
+  .stat-val{font-size:1.3em;}
+  .login-card{padding:30px 24px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════
+     LOADER
+     ═══════════════════════════════════════════════════════ -->
+<div id="loader" class="hidden"><div class="spinner"></div><span>Chargement…</span></div>
+
+<!-- ═══════════════════════════════════════════════════════
+     LOGIN VIEW
+     ═══════════════════════════════════════════════════════ -->
+<div id="loginView" class="login-view">
+  <div class="login-card">
+    <h1>🔥 JSP St Cyprien</h1>
+    <p class="subtitle">Suivi d'activité des Jeunes Sapeurs-Pompiers</p>
+    <div id="loginChoice" class="login-choice">
+      <button class="btn-jsp" onclick="showLoginForm('jsp')">🎒 Accès JSP</button>
+      <button class="btn-ref" onclick="showLoginForm('ref')">📋 Accès Responsables</button>
+    </div>
+    <div id="loginForm" class="login-form">
+      <h2 id="loginTitle"></h2>
+      <input id="loginInput" placeholder="Identifiant" autocomplete="username">
+      <input id="pwdInput" type="password" placeholder="Mot de passe" autocomplete="current-password">
+      <button class="btn-submit" onclick="doLogin()">Se connecter</button>
+      <button class="btn-back" onclick="backToChoice()">← Retour</button>
+      <div id="loginError" class="login-error"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     JSP VIEW
+     ═══════════════════════════════════════════════════════ -->
+<div id="jspView" style="display:none;">
+  <div class="top-bar">
+    <span class="welcome" id="jspWelcome"></span>
+    <div class="actions">
+      <button onclick="logout()">🚪 Déconnexion</button>
+    </div>
+  </div>
+  <div id="jspStats" class="stats-bar"></div>
+  <div id="jspCalContainer" class="cal-container"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     RESPONSABLE VIEW
+     ═══════════════════════════════════════════════════════ -->
+<div id="refView" style="display:none;">
+  <div class="top-bar">
+    <span class="welcome" id="refWelcome"></span>
+    <div class="actions">
+      <button onclick="showBilan()">📊 Bilan des JSP</button>
+      <button onclick="backToRefCalendar()">📅 Calendrier</button>
+      <button onclick="logout()">🚪 Déconnexion</button>
+    </div>
+  </div>
+  <div id="refCalPanel">
+    <div id="refCalContainer" class="cal-container"></div>
+  </div>
+  <div id="bilanPanel" class="bilan-panel" style="display:none;"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL
+     ═══════════════════════════════════════════════════════ -->
+<div id="modalOverlay" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal()">
+  <div id="modalContent" class="modal-content"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<script>
+/* ═══════════════════════════════════════════════════════
+   STATE
+   ═══════════════════════════════════════════════════════ */
+var STATE = {
+  role: null,        // 'jsp' | 'ref'
+  user: null,        // { identite, login, section? }
+  jspData: null,     // { jsp, events, attendance, stats }
+  refData: null,     // { sections, events }
+  bilanData: null,
+  calYear: new Date().getFullYear(),
+  calMonth: new Date().getMonth(),
+  bilanSort: { col: null, asc: true },
+  bilanSection: null
+};
+
+/* ═══════════════════════════════════════════════════════
+   UTILITIES
+   ═══════════════════════════════════════════════════════ */
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function pad(n){ return n<10?'0'+n:String(n); }
+function showLoader(){ document.getElementById('loader').classList.remove('hidden'); }
+function hideLoader(){ document.getElementById('loader').classList.add('hidden'); }
+
+function showView(id){
+  ['loginView','jspView','refView'].forEach(function(v){ document.getElementById(v).style.display = v===id ? '' : 'none'; });
+}
+
+/* ═══════════════════════════════════════════════════════
+   LOGIN FLOW
+   ═══════════════════════════════════════════════════════ */
+var _loginRole = '';
+
+function showLoginForm(role){
+  _loginRole = role;
+  document.getElementById('loginChoice').style.display='none';
+  document.getElementById('loginForm').style.display='block';
+  document.getElementById('loginTitle').textContent = role==='jsp' ? '🎒 Connexion JSP' : '📋 Connexion Responsable';
+  document.getElementById('loginInput').value='';
+  document.getElementById('pwdInput').value='';
+  document.getElementById('loginError').textContent='';
+  document.getElementById('loginInput').focus();
+}
+
+function backToChoice(){
+  document.getElementById('loginChoice').style.display='';
+  document.getElementById('loginForm').style.display='none';
+}
+
+function doLogin(){
+  var login = document.getElementById('loginInput').value.trim();
+  var pwd = document.getElementById('pwdInput').value.trim();
+  if(!login||!pwd){ document.getElementById('loginError').textContent='Veuillez remplir tous les champs.'; return; }
+  document.getElementById('loginError').textContent='';
+  showLoader();
+
+  var fn = _loginRole==='jsp' ? 'loginJSP' : 'loginReferent';
+  google.script.run
+    .withSuccessHandler(function(r){
+      if(r.success){
+        STATE.role = _loginRole;
+        STATE.user = r;
+        STATE.calYear = new Date().getFullYear();
+        STATE.calMonth = new Date().getMonth();
+        if(_loginRole==='jsp') loadJSPData();
+        else loadRefData();
+      } else {
+        hideLoader();
+        document.getElementById('loginError').textContent = r.message;
+      }
+    })
+    .withFailureHandler(function(e){ hideLoader(); document.getElementById('loginError').textContent='Erreur : '+e.message; })
+    [fn](login, pwd);
+}
+
+// Enter key to submit
+document.getElementById('pwdInput').addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
+
+function logout(){
+  STATE.role=null; STATE.user=null; STATE.jspData=null; STATE.refData=null; STATE.bilanData=null;
+  showView('loginView');
+  backToChoice();
+}
+
+/* ═══════════════════════════════════════════════════════
+   CALENDAR BUILDER
+   ═══════════════════════════════════════════════════════ */
+var MOIS_NOMS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+var JOUR_NOMS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+
+function buildCalendar(year, month, events, size, clickFn){
+  var first = new Date(year, month, 1);
+  var last = new Date(year, month+1, 0);
+  var startDow = (first.getDay()+6)%7;
+  var totalDays = last.getDate();
+  var today = new Date();
+
+  /* Événements par jour */
+  var evtByDay = {};
+  if(events){
+    for(var i=0;i<events.length;i++){
+      var p = events[i].date.split('-');
+      if(parseInt(p[0])===year && parseInt(p[1])-1===month){
+        var d=parseInt(p[2]);
+        if(!evtByDay[d]) evtByDay[d]=[];
+        evtByDay[d].push(events[i]);
+      }
+    }
+  }
+
+  var cls = size==='big' ? 'cal-big' : 'cal-small';
+  var h = '<div class="'+cls+'">';
+  h += '<div class="cal-title">'+MOIS_NOMS[month]+' '+year+'</div>';
+  h += '<div class="cal-grid">';
+
+  for(var d=0;d<7;d++){
+    h += '<div class="cal-day-header">'+(size==='big'?JOUR_NOMS[d]:JOUR_NOMS[d].charAt(0))+'</div>';
+  }
+
+  for(var b=0;b<startDow;b++) h+='<div class="cal-cell empty"></div>';
+
+  for(var day=1;day<=totalDays;day++){
+    var hasEvt = evtByDay[day] && evtByDay[day].length>0;
+    var isToday = (day===today.getDate() && month===today.getMonth() && year===today.getFullYear());
+    var dateStr = year+'-'+pad(month+1)+'-'+pad(day);
+    var cellCls = 'cal-cell'+(isToday?' today':'')+(hasEvt?' has-event':'');
+
+    h += '<div class="'+cellCls+'"';
+    if(clickFn) h += ' onclick="'+clickFn+'(\''+dateStr+'\')"';
+    h += '>';
+    h += '<span class="cal-num">'+day+'</span>';
+    if(hasEvt){
+      h += '<span class="cal-dot"></span>';
+      /* Tooltip */
+      var ttLines = [];
+      for(var e=0;e<evtByDay[day].length;e++){
+        ttLines.push(esc(evtByDay[day][e].nom)+' ('+esc(evtByDay[day][e].heureDebut)+'-'+esc(evtByDay[day][e].heureFin)+')');
+      }
+      h += '<span class="cal-tooltip">'+ttLines.join('<br>')+'</span>';
+    }
+    h += '</div>';
+  }
+  h += '</div></div>';
+  return h;
+}
+
+/* ═══════════════════════════════════════════════════════
+   JSP VIEW
+   ═══════════════════════════════════════════════════════ */
+function loadJSPData(){
+  google.script.run
+    .withSuccessHandler(function(data){
+      STATE.jspData = data;
+      hideLoader();
+      showView('jspView');
+      renderJSPView();
+    })
+    .withFailureHandler(function(e){ hideLoader(); alert('Erreur chargement: '+e.message); })
+    .getJSPPageData(STATE.user.login);
+}
+
+function renderJSPView(){
+  var d = STATE.jspData;
+  if(!d||d.error) return;
+
+  document.getElementById('jspWelcome').textContent = '🔥 Bienvenue, '+d.jsp.identite+' ('+d.jsp.section+')';
+
+  /* Stats */
+  var s = d.stats;
+  var statsH = '';
+  statsH += '<div class="stat-card blue"><div class="stat-val">'+s.totalEvents+'</div><div class="stat-label">Événements prévus</div></div>';
+  statsH += '<div class="stat-card red"><div class="stat-val">'+s.totalAbsences+'</div><div class="stat-label">Absences totales</div></div>';
+  statsH += '<div class="stat-card orange"><div class="stat-val">'+s.absSignalees+'</div><div class="stat-label">Absences signalées</div></div>';
+  statsH += '<div class="stat-card red"><div class="stat-val">'+s.absNonSignalees+'</div><div class="stat-label">Absences non signalées</div></div>';
+  statsH += '<div class="stat-card '+(s.tauxAbsence>30?'red':(s.tauxAbsence>15?'orange':'green'))+'"><div class="stat-val">'+s.tauxAbsence+'%</div><div class="stat-label">Taux d\'absence</div></div>';
+  document.getElementById('jspStats').innerHTML = statsH;
+
+  renderJSPCalendar();
+}
+
+function renderJSPCalendar(){
+  var events = STATE.jspData.events;
+  var y=STATE.calYear, m=STATE.calMonth;
+  var pm=m-1, py=y; if(pm<0){pm=11;py--;}
+  var nm=m+1, ny=y; if(nm>11){nm=0;ny++;}
+
+  var h = '';
+  h += '<button class="cal-nav" onclick="jspNav(-1)">◀</button>';
+  h += buildCalendar(py,pm,events,'small','onJSPDayClick');
+  h += buildCalendar(y,m,events,'big','onJSPDayClick');
+  h += buildCalendar(ny,nm,events,'small','onJSPDayClick');
+  h += '<button class="cal-nav" onclick="jspNav(1)">▶</button>';
+  document.getElementById('jspCalContainer').innerHTML = h;
+}
+
+function jspNav(dir){
+  STATE.calMonth += dir;
+  if(STATE.calMonth>11){STATE.calMonth=0;STATE.calYear++;}
+  if(STATE.calMonth<0){STATE.calMonth=11;STATE.calYear--;}
+  renderJSPCalendar();
+}
+
+function onJSPDayClick(dateStr){
+  var events = getEventsOnDate(STATE.jspData.events, dateStr);
+  if(events.length===0) return;
+  showJSPEventModal(dateStr, events);
+}
+
+function getEventsOnDate(events, dateStr){
+  var result=[];
+  for(var i=0;i<events.length;i++){
+    if(events[i].date===dateStr) result.push(events[i]);
+  }
+  return result;
+}
+
+function showJSPEventModal(dateStr, events){
+  var parts=dateStr.split('-');
+  var dateLabel = parseInt(parts[2])+' '+MOIS_NOMS[parseInt(parts[1])-1]+' '+parts[0];
+  var att = STATE.jspData.attendance;
+
+  var h = '<button class="modal-close" onclick="closeModal()">✕</button>';
+  h += '<h2>📅 '+dateLabel+'</h2>';
+
+  for(var i=0;i<events.length;i++){
+    var e = events[i];
+    var a = att[e.id];
+    h += '<div class="evt-card">';
+    h += '<h3>🔥 '+esc(e.nom)+'</h3>';
+    h += '<div class="evt-detail">';
+    h += '🕐 '+esc(e.heureDebut)+' — '+esc(e.heureFin)+'<br>';
+    h += '📍 '+esc(e.lieu)+'<br>';
+    h += '👥 '+esc(e.sections.join(', '));
+    h += '</div>';
+
+    if(a && a.signale==='OUI'){
+      h += '<div style="margin-top:10px;padding:8px 12px;background:#fef3c7;border-radius:8px;font-size:.85em;">⚠️ Absence signalée — Motif : <i>'+esc(a.motif)+'</i></div>';
+    } else if(a && a.present==='NON'){
+      h += '<div style="margin-top:10px;padding:8px 12px;background:#fde8ea;border-radius:8px;font-size:.85em;">❌ Absent (non signalé)</div>';
+    } else if(a && a.present==='OUI'){
+      h += '<div style="margin-top:10px;padding:8px 12px;background:#dcfce7;border-radius:8px;font-size:.85em;">✅ Présent</div>';
+    }
+
+    if(!a || (a && a.signale!=='OUI')){
+      h += '<button class="modal-btn danger" style="margin-top:10px;" onclick="showAbsenceForm(\''+e.id+'\')">🙋 Signaler mon absence</button>';
+    }
+    h += '</div>';
+  }
+
+  openModal(h);
+}
+
+function showAbsenceForm(eventId){
+  var h = '<button class="modal-close" onclick="closeModal()">✕</button>';
+  h += '<h2>🙋 Signaler une absence</h2>';
+  h += '<div class="modal-field"><label>Motif de l\'absence</label>';
+  h += '<textarea id="absenceMotif" placeholder="Précisez le motif de votre absence…"></textarea></div>';
+  h += '<button class="modal-btn danger" onclick="submitAbsence(\''+eventId+'\')">Confirmer l\'absence</button>';
+  h += '<button class="modal-btn secondary" onclick="closeModal()">Annuler</button>';
+  openModal(h);
+}
+
+function submitAbsence(eventId){
+  var motif = document.getElementById('absenceMotif').value.trim();
+  if(!motif){ alert('Veuillez indiquer un motif.'); return; }
+  showLoader();
+  google.script.run
+    .withSuccessHandler(function(){
+      closeModal();
+      loadJSPData(); /* Recharger données */
+    })
+    .withFailureHandler(function(e){ hideLoader(); alert('Erreur : '+e.message); })
+    .signalAbsence(STATE.user.login, eventId, motif);
+}
+
+/* ═══════════════════════════════════════════════════════
+   RESPONSABLE VIEW
+   ═══════════════════════════════════════════════════════ */
+function loadRefData(){
+  google.script.run
+    .withSuccessHandler(function(data){
+      STATE.refData = data;
+      hideLoader();
+      showView('refView');
+      renderRefView();
+    })
+    .withFailureHandler(function(e){ hideLoader(); alert('Erreur chargement: '+e.message); })
+    .getReferentPageData(STATE.user.login);
+}
+
+function renderRefView(){
+  document.getElementById('refWelcome').textContent = '📋 '+STATE.user.identite+' — Responsable';
+  renderRefCalendar();
+}
+
+function renderRefCalendar(){
+  var events = STATE.refData.events;
+  var y=STATE.calYear, m=STATE.calMonth;
+
+  var h = '';
+  h += '<button class="cal-nav" onclick="refNav(-1)">◀</button>';
+  h += buildCalendar(y,m,events,'big','onRefDayClick');
+  h += '<button class="cal-nav" onclick="refNav(1)">▶</button>';
+  document.getElementById('refCalContainer').innerHTML = h;
+}
+
+function refNav(dir){
+  STATE.calMonth += dir;
+  if(STATE.calMonth>11){STATE.calMonth=0;STATE.calYear++;}
+  if(STATE.calMonth<0){STATE.calMonth=11;STATE.calYear--;}
+  renderRefCalendar();
+}
+
+function backToRefCalendar(){
+  document.getElementById('refCalPanel').style.display='';
+  document.getElementById('bilanPanel').style.display='none';
+}
+
+function onRefDayClick(dateStr){
+  var events = getEventsOnDate(STATE.refData.events, dateStr);
+  showRefDayModal(dateStr, events);
+}
+
+function showRefDayModal(dateStr, events){
+  var parts=dateStr.split('-');
+  var dateLabel = parseInt(parts[2])+' '+MOIS_NOMS[parseInt(parts[1])-1]+' '+parts[0];
+
+  var h = '<button class="modal-close" onclick="closeModal()">✕</button>';
+  h += '<h2>📅 '+dateLabel+'</h2>';
+
+  if(events.length>0){
+    for(var i=0;i<events.length;i++){
+      var e = events[i];
+      h += '<div class="evt-card">';
+      h += '<h3>🔥 '+esc(e.nom)+'</h3>';
+      h += '<div class="evt-detail">';
+      h += '🕐 '+esc(e.heureDebut)+' — '+esc(e.heureFin)+'<br>';
+      h += '📍 '+esc(e.lieu)+'<br>';
+      h += '👥 '+esc(e.sections.join(', '));
+      h += '</div>';
+
+      /* Bouton présences : uniquement si la date est aujourd'hui ou passée */
+      var evtDate = new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
+      var today = new Date(); today.setHours(0,0,0,0); evtDate.setHours(0,0,0,0);
+      if(evtDate<=today){
+        h += '<button class="modal-btn primary" style="margin-top:10px;" onclick="showAttendance(\''+e.id+'\')">📋 Liste des présents</button>';
+      }
+      h += '<button class="modal-btn danger" style="margin-top:10px;" onclick="confirmDeleteEvent(\''+e.id+'\')">🗑️ Supprimer</button>';
+      h += '</div>';
+    }
+    h += '<hr style="margin:16px 0;border:none;border-top:1px solid var(--border);">';
+  } else {
+    h += '<p style="color:var(--text-light);margin-bottom:16px;">Aucun événement prévu ce jour.</p>';
+  }
+
+  h += '<button class="modal-btn success" onclick="showCreateEvent(\''+dateStr+'\')">➕ Créer un événement</button>';
+  openModal(h);
+}
+
+/* ── Créer événement ── */
+function showCreateEvent(dateStr){
+  var parts=dateStr.split('-');
+  var dateLabel = parseInt(parts[2])+' '+MOIS_NOMS[parseInt(parts[1])-1]+' '+parts[0];
+  var sections = STATE.refData.sections;
+
+  var h = '<button class="modal-close" onclick="closeModal()">✕</button>';
+  h += '<h2>➕ Nouvel événement — '+dateLabel+'</h2>';
+  h += '<input type="hidden" id="evtDate" value="'+dateStr+'">';
+  h += '<div class="modal-field"><label>Nom de l\'événement</label><input id="evtNom" placeholder="Ex: Manœuvres incendie"></div>';
+  h += '<div style="display:flex;gap:10px;">';
+  h += '<div class="modal-field" style="flex:1;"><label>Heure de début</label><input id="evtDebut" type="time" value="14:00"></div>';
+  h += '<div class="modal-field" style="flex:1;"><label>Heure de fin</label><input id="evtFin" type="time" value="17:00"></div>';
+  h += '</div>';
+  h += '<div class="modal-field"><label>Lieu</label><input id="evtLieu" value="CIS St Cyprien"></div>';
+  h += '<div class="modal-field"><label>Sections concernées</label><div class="modal-sections">';
+  for(var i=0;i<sections.length;i++){
+    h += '<label><input type="checkbox" name="evtSection" value="'+esc(sections[i])+'"> '+esc(sections[i])+'</label>';
+  }
+  h += '</div></div>';
+  h += '<button class="modal-btn primary" onclick="submitCreateEvent()">✅ Créer</button>';
+  h += '<button class="modal-btn secondary" onclick="closeModal()">Annuler</button>';
+  openModal(h);
+}
+
+function submitCreateEvent(){
+  var nom = document.getElementById('evtNom').value.trim();
+  var date = document.getElementById('evtDate').value;
+  var debut = document.getElementById('evtDebut').value;
+  var fin = document.getElementById('evtFin').value;
+  var lieu = document.getElementById('evtLieu').value.trim();
+
+  var sectionBoxes = document.querySelectorAll('input[name="evtSection"]:checked');
+  var sections = [];
+  for(var i=0;i<sectionBoxes.length;i++) sections.push(sectionBoxes[i].value);
+
+  if(!nom){ alert('Veuillez saisir un nom.'); return; }
+  if(sections.length===0){ alert('Veuillez sélectionner au moins une section.'); return; }
+
+  showLoader();
+  google.script.run
+    .withSuccessHandler(function(){
+      closeModal();
+      loadRefData();
+    })
+    .withFailureHandler(function(e){ hideLoader(); alert('Erreur : '+e.message); })
+    .createEvent({
+      date: date,
+      nom: nom,
+      heureDebut: debut,
+      heureFin: fin,
+      lieu: lieu || 'CIS St Cyprien',
+      sections: sections,
+      creePar: STATE.user.login
+    });
+}
+
+/* ── Supprimer événement ── */
+function confirmDeleteEvent(eventId){
+  if(!confirm('Supprimer cet événement et toutes les présences associées ?')) return;
+  showLoader();
+  google.script.run
+    .withSuccessHandler(function(){ closeModal(); loadRefData(); })
+    .withFailureHandler(function(e){ hideLoader(); alert('Erreur : '+e.message); })
+    .deleteEvent(eventId);
+}
+
+/* ── Présences ── */
+function showAttendance(eventId){
+  showLoader();
+  google.script.run
+    .withSuccessHandler(function(data){
+      hideLoader();
+      if(data.error){ alert(data.error); return; }
+      renderAttendanceModal(data);
+    })
+    .withFailureHandler(function(e){ hideLoader(); alert('Erreur : '+e.message); })
+    .getAttendanceList(eventId);
+}
+
+function renderAttendanceModal(data){
+  var evt = data.event;
+  var jsps = data.jsps;
+  var parts = evt.date.split('-');
+  var dateLabel = parseInt(parts[2])+' '+MOIS_NOMS[parseInt(parts[1])-1]+' '+parts[0];
+
+  var h = '<button class="modal-close" onclick="closeModal()">✕</button>';
+  h += '<h2>📋 Présences — '+esc(evt.nom)+'</h2>';
+  h += '<p style="color:var(--text-light);margin-bottom:16px;font-size:.9em;">'+dateLabel+' • '+esc(evt.sections.join(', '))+'</p>';
+
+  h += '<button class="modal-btn primary" onclick="toggleAllPresent(true)" style="margin-bottom:6px;">☑️ Cocher tout</button>';
+  h += '<button class="modal-btn secondary" onclick="toggleAllPresent(false)" style="margin-bottom:12px;">☐ Décocher tout</button>';
+
+  h += '<div class="att-list">';
+  for(var i=0;i<jsps.length;i++){
+    var j = jsps[i];
+    var checked = j.present!=='NON' ? 'checked' : '';
+    h += '<div class="att-item">';
+    h += '<input type="checkbox" class="att-cb" data-login="'+esc(j.login)+'" data-identite="'+esc(j.identite)+'" data-section="'+esc(j.section)+'" '+checked+'>';
+    h += '<span class="att-name">'+esc(j.identite)+'</span>';
+    h += '<span class="att-section">'+esc(j.section)+'</span>';
+    if(j.signale==='OUI') h += '<span class="att-signale" title="Motif: '+esc(j.motif)+'">⚠️ Absence signalée</span>';
+    h += '</div>';
+  }
+  h += '</div>';
+
+  h += '<button class="modal-btn success" style="margin-top:16px;" onclick="submitAttendance(\''+evt.id+'\')">💾 Enregistrer</button>';
+  h += '<button class="modal-btn secondary" style="margin-top:16px;" onclick="closeModal()">Annuler</button>';
+  openModal(h);
+}
+
+function toggleAllPresent(state){
+  var cbs = document.querySelectorAll('.att-cb');
+  for(var i=0;i<cbs.length;i++) cbs[i].checked = state;
+}
+
+function submitAttendance(eventId){
+  var cbs = document.querySelectorAll('.att-cb');
+  var list = [];
+  for(var i=0;i<cbs.length;i++){
+    list.push({
+      login: cbs[i].getAttribute('data-login'),
+      identite: cbs[i].getAttribute('data-identite'),
+      section: cbs[i].getAttribute('data-section'),
+      present: cbs[i].checked ? 'OUI' : 'NON'
+    });
+  }
+  showLoader();
+  google.script.run
+    .withSuccessHandler(function(){ closeModal(); loadRefData(); })
+    .withFailureHandler(function(e){ hideLoader(); alert('Erreur : '+e.message); })
+    .saveAttendance(eventId, list);
+}
+
+/* ═══════════════════════════════════════════════════════
+   BILAN
+   ═══════════════════════════════════════════════════════ */
+function showBilan(){
+  document.getElementById('refCalPanel').style.display='none';
+  document.getElementById('bilanPanel').style.display='';
+  STATE.bilanData = null;
+  STATE.bilanSection = null;
+  showLoader();
+
+  google.script.run
+    .withSuccessHandler(function(data){
+      STATE.bilanData = data;
+      hideLoader();
+      renderBilanPanel();
+    })
+    .withFailureHandler(function(e){ hideLoader(); alert('Erreur : '+e.message); })
+    .getBilanData();
+}
+
+function renderBilanPanel(){
+  var data = STATE.bilanData;
+  if(!data) return;
+
+  var h = '<h2>📊 Bilan des JSP</h2>';
+  h += '<div class="bilan-tabs" id="bilanTabs">';
+  for(var i=0;i<data.sections.length;i++){
+    var sec = data.sections[i];
+    var active = STATE.bilanSection===sec ? ' active' : '';
+    h += '<button class="'+active+'" onclick="selectBilanSection(\''+esc(sec)+'\')">'+esc(sec)+'</button>';
+  }
+  h += '</div>';
+  h += '<div id="bilanTableWrap" class="bilan-table-wrap"></div>';
+
+  document.getElementById('bilanPanel').innerHTML = h;
+
+  if(!STATE.bilanSection && data.sections.length>0){
+    selectBilanSection(data.sections[0]);
+  } else if(STATE.bilanSection){
+    renderBilanTable();
+  }
+}
+
+function selectBilanSection(sec){
+  STATE.bilanSection = sec;
+  STATE.bilanSort = {col:null,asc:true};
+  /* Update tabs */
+  var btns = document.querySelectorAll('#bilanTabs button');
+  for(var i=0;i<btns.length;i++) btns[i].classList.toggle('active', btns[i].textContent===sec);
+  renderBilanTable();
+}
+
+function renderBilanTable(){
+  var data = STATE.bilanData;
+  var sec = STATE.bilanSection;
+  if(!data||!sec) return;
+
+  var rows = data.bilan[sec];
+  if(!rows||rows.length===0){
+    document.getElementById('bilanTableWrap').innerHTML='<p style="padding:20px;color:var(--text-light);">Aucun JSP dans cette section.</p>';
+    return;
+  }
+
+  /* Tri */
+  var sort = STATE.bilanSort;
+  if(sort.col!==null){
+    rows = rows.slice(); /* copie */
+    rows.sort(function(a,b){
+      var va,vb;
+      if(sort.col==='nom'){va=a.identite.toLowerCase();vb=b.identite.toLowerCase();return sort.asc?va.localeCompare(vb):vb.localeCompare(va);}
+      va=a[sort.col]; vb=b[sort.col];
+      return sort.asc?va-vb:vb-va;
+    });
+  }
+
+  var cols = [
+    {key:'nom',label:'Nom'},
+    {key:'presences',label:'Présences'},
+    {key:'absences',label:'Absences totales'},
+    {key:'absSignalees',label:'Signalées'},
+    {key:'absNonSignalees',label:'Non signalées'},
+    {key:'tauxAbsence',label:'Taux absence'}
+  ];
+
+  var h = '<table class="bilan-table"><thead><tr>';
+  for(var c=0;c<cols.length;c++){
+    var active = sort.col===cols[c].key;
+    var arrow = active?(sort.asc?' ▲':' ▼'):' ↕';
+    h += '<th class="'+(active?'sorted':'')+'" onclick="sortBilan(\''+cols[c].key+'\')">'+cols[c].label+'<span class="sort-arrow">'+arrow+'</span></th>';
+  }
+  h += '</tr></thead><tbody>';
+
+  for(var i=0;i<rows.length;i++){
+    var r = rows[i];
+    h += '<tr>';
+    h += '<td style="font-weight:700;">'+esc(r.identite)+'</td>';
+    h += '<td class="val-pres">'+r.presences+'</td>';
+    h += '<td class="val-abs">'+r.absences+'</td>';
+    h += '<td>'+r.absSignalees+'</td>';
+    h += '<td class="val-abs">'+r.absNonSignalees+'</td>';
+    h += '<td class="val-taux" style="color:'+(r.tauxAbsence>30?'var(--danger)':(r.tauxAbsence>15?'var(--warning)':'var(--success)'))+'">'+r.tauxAbsence+'%</td>';
+    h += '</tr>';
+  }
+  h += '</tbody></table>';
+
+  document.getElementById('bilanTableWrap').innerHTML = h;
+}
+
+function sortBilan(col){
+  var s = STATE.bilanSort;
+  if(s.col===col) s.asc=!s.asc;
+  else { s.col=col; s.asc=true; }
+  renderBilanTable();
+}
+
+/* ═══════════════════════════════════════════════════════
+   MODAL HELPERS
+   ═══════════════════════════════════════════════════════ */
+function openModal(html){
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('modalOverlay').style.display='flex';
+}
+function closeModal(){
+  document.getElementById('modalOverlay').style.display='none';
+  document.getElementById('modalContent').innerHTML='';
+}
+</script>
+</body>
+</html>

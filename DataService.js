@@ -8,8 +8,21 @@ function getSS_() {
 }
 
 function formatDate_(d) {
-  if (d instanceof Date) return Utilities.formatDate(d, 'Europe/Paris', 'yyyy-MM-dd');
-  return String(d);
+  if (d instanceof Date) return Utilities.formatDate(d, 'Europe/Paris', 'dd/MM/yyyy');
+  var s = String(d);
+  /* Convertir yyyy-MM-dd en dd/MM/yyyy si besoin */
+  var m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return m[3] + '/' + m[2] + '/' + m[1];
+  return s;
+}
+
+function formatTime_(t) {
+  if (t instanceof Date) return Utilities.formatDate(t, 'Europe/Paris', 'HH:mm');
+  var s = String(t || '');
+  /* Si déjà au format HH:mm ou HH:mm:ss, ne garder que HH:mm */
+  var m = s.match(/(\d{1,2}:\d{2})/);
+  if (m) return m[1];
+  return s;
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -42,8 +55,8 @@ function getJSPPageData(jspLogin) {
         id: String(evtData[i][0]),
         date: formatDate_(evtData[i][1]),
         nom: String(evtData[i][2]),
-        heureDebut: String(evtData[i][3]),
-        heureFin: String(evtData[i][4]),
+        heureDebut: formatTime_(evtData[i][3]),
+        heureFin: formatTime_(evtData[i][4]),
         lieu: String(evtData[i][5]),
         sections: sections
       });
@@ -120,8 +133,8 @@ function getReferentPageData(refLogin) {
       id: String(evtData[i][0]),
       date: formatDate_(evtData[i][1]),
       nom: String(evtData[i][2]),
-      heureDebut: String(evtData[i][3]),
-      heureFin: String(evtData[i][4]),
+      heureDebut: formatTime_(evtData[i][3]),
+      heureFin: formatTime_(evtData[i][4]),
       lieu: String(evtData[i][5]),
       sections: String(evtData[i][6]).split(',').map(function(s) { return s.trim(); }),
       creePar: String(evtData[i][7] || '')
@@ -201,8 +214,8 @@ function getAttendanceList(eventId) {
         id: String(evtData[i][0]),
         date: formatDate_(evtData[i][1]),
         nom: String(evtData[i][2]),
-        heureDebut: String(evtData[i][3]),
-        heureFin: String(evtData[i][4]),
+        heureDebut: formatTime_(evtData[i][3]),
+        heureFin: formatTime_(evtData[i][4]),
         lieu: String(evtData[i][5]),
         sections: String(evtData[i][6]).split(',').map(function(s) { return s.trim(); })
       };

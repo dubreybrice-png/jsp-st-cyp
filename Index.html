@@ -340,6 +340,25 @@ function logout(){
 var MOIS_NOMS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 var JOUR_NOMS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
 
+/* Parse une date dd/MM/yyyy ou yyyy-MM-dd en {y,m,d} */
+function parseEvtDate(s){
+  if(!s) return null;
+  var p = String(s).split('/');
+  if(p.length===3 && p[2].length===4) return {d:parseInt(p[0]),m:parseInt(p[1]),y:parseInt(p[2])};
+  p = String(s).split('-');
+  if(p.length===3 && p[0].length===4) return {y:parseInt(p[0]),m:parseInt(p[1]),d:parseInt(p[2])};
+  return null;
+}
+/* Convertir date evt en dateStr interne yyyy-MM-dd */
+function toInternalDate(s){
+  var p=parseEvtDate(s); if(!p) return s;
+  return p.y+'-'+pad(p.m)+'-'+pad(p.d);
+}
+function formatDateLabel(s){
+  var p=parseEvtDate(s); if(!p) return s;
+  return p.d+' '+MOIS_NOMS[p.m-1]+' '+p.y;
+}
+
 function buildCalendar(year, month, events, size, clickFn){
   var first = new Date(year, month, 1);
   var last = new Date(year, month+1, 0);
@@ -351,9 +370,9 @@ function buildCalendar(year, month, events, size, clickFn){
   var evtByDay = {};
   if(events){
     for(var i=0;i<events.length;i++){
-      var p = events[i].date.split('-');
-      if(parseInt(p[0])===year && parseInt(p[1])-1===month){
-        var d=parseInt(p[2]);
+      var p = parseEvtDate(events[i].date);
+      if(p && p.y===year && p.m-1===month){
+        var d=p.d;
         if(!evtByDay[d]) evtByDay[d]=[];
         evtByDay[d].push(events[i]);
       }
@@ -472,14 +491,13 @@ function onJSPDayClick(dateStr){
 function getEventsOnDate(events, dateStr){
   var result=[];
   for(var i=0;i<events.length;i++){
-    if(events[i].date===dateStr) result.push(events[i]);
+    if(toInternalDate(events[i].date)===dateStr) result.push(events[i]);
   }
   return result;
 }
 
 function showJSPEventModal(dateStr, events){
-  var parts=dateStr.split('-');
-  var dateLabel = parseInt(parts[2])+' '+MOIS_NOMS[parseInt(parts[1])-1]+' '+parts[0];
+  var dateLabel = formatDateLabel(dateStr);
   var att = STATE.jspData.attendance;
 
   var h = '<button class="modal-close" onclick="closeModal()">✕</button>';
@@ -597,8 +615,7 @@ function onRefDayClick(dateStr){
 }
 
 function showRefDayModal(dateStr, events){
-  var parts=dateStr.split('-');
-  var dateLabel = parseInt(parts[2])+' '+MOIS_NOMS[parseInt(parts[1])-1]+' '+parts[0];
+  var dateLabel = formatDateLabel(dateStr);
 
   var h = '<button class="modal-close" onclick="closeModal()">✕</button>';
   h += '<h2>📅 '+dateLabel+'</h2>';
@@ -614,8 +631,9 @@ function showRefDayModal(dateStr, events){
       h += '👥 '+esc(e.sections.join(', '));
       h += '</div>';
 
-      /* Bouton présences : uniquement si la date est aujourd'hui ou passée */
-      var evtDate = new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
+      /* Bouton appel : uniquement si la date est aujourd'hui ou passée */
+      var pd = parseEvtDate(e.date) || parseEvtDate(dateStr);
+      var evtDate = pd ? new Date(pd.y, pd.m-1, pd.d) : new Date();
       var today = new Date(); today.setHours(0,0,0,0); evtDate.setHours(0,0,0,0);
       if(evtDate<=today){
         h += '<button class="modal-btn primary" style="margin-top:10px;" onclick="showAttendance(\''+e.id+'\')">📋 Faire l\'appel</button>';
@@ -634,8 +652,7 @@ function showRefDayModal(dateStr, events){
 
 /* ── Créer événement ── */
 function showCreateEvent(dateStr){
-  var parts=dateStr.split('-');
-  var dateLabel = parseInt(parts[2])+' '+MOIS_NOMS[parseInt(parts[1])-1]+' '+parts[0];
+  var dateLabel = formatDateLabel(dateStr);
   var sections = STATE.refData.sections;
 
   var h = '<button class="modal-close" onclick="closeModal()">✕</button>';
@@ -719,8 +736,7 @@ function renderAttendanceModal(data){
   var evt = data.event;
   var jsps = data.jsps;
   var allSections = data.allSections || [];
-  var parts = evt.date.split('-');
-  var dateLabel = parseInt(parts[2])+' '+MOIS_NOMS[parseInt(parts[1])-1]+' '+parts[0];
+  var dateLabel = formatDateLabel(evt.date);
 
   var h = '<button class="modal-close" onclick="closeModal()">✕</button>';
   h += '<h2>📋 Faire l\'appel — '+esc(evt.nom)+'</h2>';

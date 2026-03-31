@@ -24,8 +24,11 @@ function loginJSP(login, pwd) {
   var sheet = ss.getSheetByName(Config.SHEETS.JSP);
   var data = sheet.getDataRange().getValues();
   for (var i = 1; i < data.length; i++) {
+    var storedPwd = data[i][2] instanceof Date
+      ? Utilities.formatDate(data[i][2], 'Europe/Paris', 'dd/MM/yyyy')
+      : String(data[i][2]).trim();
     if (String(data[i][1]).trim() === String(login).trim() &&
-        String(data[i][2]).trim() === String(pwd).trim()) {
+        storedPwd === String(pwd).trim()) {
       return {
         success: true,
         identite: data[i][0],
@@ -42,8 +45,11 @@ function loginReferent(login, pwd) {
   var sheet = ss.getSheetByName(Config.SHEETS.REFERENTS);
   var data = sheet.getDataRange().getValues();
   for (var i = 1; i < data.length; i++) {
+    var storedPwd = data[i][2] instanceof Date
+      ? Utilities.formatDate(data[i][2], 'Europe/Paris', 'dd/MM/yyyy')
+      : String(data[i][2]).trim();
     if (String(data[i][1]).trim() === String(login).trim() &&
-        String(data[i][2]).trim() === String(pwd).trim()) {
+        storedPwd === String(pwd).trim()) {
       return {
         success: true,
         identite: data[i][0],

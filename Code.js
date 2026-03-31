@@ -2,9 +2,10 @@
    POINT D'ENTRÉE — JSP St Cyprien
    ═══════════════════════════════════════════════════════ */
 
-function doGet() {
-  return HtmlService.createTemplateFromFile('Index')
-    .evaluate()
+function doGet(e) {
+  var template = HtmlService.createTemplateFromFile('Index');
+  template.eventParam = (e && e.parameter && e.parameter.event) ? e.parameter.event : '';
+  return template.evaluate()
     .setTitle('JSP St Cyprien — Suivi Activité')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);

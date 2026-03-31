@@ -9,18 +9,18 @@ function setupSpreadsheet() {
 
   /* ────── RÉFÉRENTS ────── */
   var refsSheet = ss.insertSheet('Référents');
-  refsSheet.appendRow(['Identité', 'Login', 'Mot de passe']);
+  refsSheet.appendRow(['Identité', 'Login', 'Mot de passe', 'Email']);
   var referents = [
-    ['Jérome Casenove',  '66000',    '66000'],
-    ['Sophie Martin',    'smartin',  '66000'],
-    ['Philippe Dubois',  'pdubois',  '66000'],
-    ['Marie Laurent',    'mlaurent', '66000'],
-    ['François Garcia',  'fgarcia',  '66000'],
-    ['Isabelle Roux',    'iroux',    '66000'],
-    ['Pierre Bonnet',    'pbonnet',  '66000'],
-    ['Catherine Blanc',  'cblanc',   '66000'],
-    ['Alain Faure',      'afaure',   '66000'],
-    ['Nathalie Girard',  'ngirard',  '66000']
+    ['Jérome Casenove',  '66000',    '66000', 'j.casenove@sdis66.fr'],
+    ['Sophie Martin',    'smartin',  '66000', 's.martin@sdis66.fr'],
+    ['Philippe Dubois',  'pdubois',  '66000', 'p.dubois@sdis66.fr'],
+    ['Marie Laurent',    'mlaurent', '66000', 'm.laurent@sdis66.fr'],
+    ['François Garcia',  'fgarcia',  '66000', 'f.garcia@sdis66.fr'],
+    ['Isabelle Roux',    'iroux',    '66000', 'i.roux@sdis66.fr'],
+    ['Pierre Bonnet',    'pbonnet',  '66000', 'p.bonnet@sdis66.fr'],
+    ['Catherine Blanc',  'cblanc',   '66000', 'c.blanc@sdis66.fr'],
+    ['Alain Faure',      'afaure',   '66000', 'a.faure@sdis66.fr'],
+    ['Nathalie Girard',  'ngirard',  '66000', 'n.girard@sdis66.fr']
   ];
   for (var i = 0; i < referents.length; i++) refsSheet.appendRow(referents[i]);
   refsSheet.setFrozenRows(1);
@@ -41,18 +41,18 @@ function setupSpreadsheet() {
 
   /* ────── LISTE JSP ────── */
   var jspSheet = ss.insertSheet('Liste JSP');
-  jspSheet.appendRow(['Identité', 'Login', 'Mot de passe', 'Section']);
+  jspSheet.appendRow(['Identité', 'Login', 'Mot de passe', 'Section', 'Email']);
   var jsps = [
-    ['Lucas Martin',  'lmartin',  '66000', 'JSP1'],
-    ['Emma Dupont',   'edupont',  '66000', 'JSP1'],
-    ['Hugo Bernard',  'hbernard', '66000', 'JSP1'],
-    ['Léa Moreau',    'lmoreau',  '66000', 'JSP2'],
-    ['Nathan Petit',  'npetit',   '66000', 'JSP2'],
-    ['Chloé Robert',  'crobert',  '66000', 'JSP2'],
-    ['Théo Richard',  'trichard', '66000', 'JSP3'],
-    ['Jade Durand',   'jdurand',  '66000', 'JSP3'],
-    ['Enzo Laurent',  'elaurent', '66000', 'JSP4'],
-    ['Manon Simon',   'msimon',   '66000', 'JSP4']
+    ['Lucas Martin',  'lmartin',  '66000', 'JSP1', 'l.martin@example.com'],
+    ['Emma Dupont',   'edupont',  '66000', 'JSP1', 'e.dupont@example.com'],
+    ['Hugo Bernard',  'hbernard', '66000', 'JSP1', 'h.bernard@example.com'],
+    ['Léa Moreau',    'lmoreau',  '66000', 'JSP2', 'l.moreau@example.com'],
+    ['Nathan Petit',  'npetit',   '66000', 'JSP2', 'n.petit@example.com'],
+    ['Chloé Robert',  'crobert',  '66000', 'JSP2', 'c.robert@example.com'],
+    ['Théo Richard',  'trichard', '66000', 'JSP3', 't.richard@example.com'],
+    ['Jade Durand',   'jdurand',  '66000', 'JSP3', 'j.durand@example.com'],
+    ['Enzo Laurent',  'elaurent', '66000', 'JSP4', 'e.laurent@example.com'],
+    ['Manon Simon',   'msimon',   '66000', 'JSP4', 'm.simon@example.com']
   ];
   for (var i = 0; i < jsps.length; i++) jspSheet.appendRow(jsps[i]);
   jspSheet.setFrozenRows(1);
@@ -102,4 +102,34 @@ function setupSpreadsheet() {
   Logger.log('╚═══════════════════════════════════════════════════╝');
 
   return ss.getId();
+}
+
+/* ═══════════════════════════════════════════════════════
+   MIGRATION — Ajouter les colonnes Email
+   Exécuter si le spreadsheet existait avant la v2
+   ═══════════════════════════════════════════════════════ */
+function addEmailColumns() {
+  var ss = SpreadsheetApp.openById(Config.SPREADSHEET_ID);
+
+  var jspSheet = ss.getSheetByName(Config.SHEETS.JSP);
+  var jspHeaders = jspSheet.getRange(1, 1, 1, jspSheet.getLastColumn()).getValues()[0];
+  if (jspHeaders.indexOf('Email') === -1) {
+    var col = jspSheet.getLastColumn() + 1;
+    jspSheet.getRange(1, col).setValue('Email').setFontWeight('bold').setBackground('#1e293b').setFontColor('#ffffff');
+    Logger.log('Colonne Email ajoutée à Liste JSP (colonne ' + col + ')');
+  } else {
+    Logger.log('Colonne Email déjà présente dans Liste JSP');
+  }
+
+  var refSheet = ss.getSheetByName(Config.SHEETS.REFERENTS);
+  var refHeaders = refSheet.getRange(1, 1, 1, refSheet.getLastColumn()).getValues()[0];
+  if (refHeaders.indexOf('Email') === -1) {
+    var col = refSheet.getLastColumn() + 1;
+    refSheet.getRange(1, col).setValue('Email').setFontWeight('bold').setBackground('#1e293b').setFontColor('#ffffff');
+    Logger.log('Colonne Email ajoutée à Référents (colonne ' + col + ')');
+  } else {
+    Logger.log('Colonne Email déjà présente dans Référents');
+  }
+
+  Logger.log('\n✅ Migration terminée ! Remplissez les emails dans le spreadsheet.');
 }

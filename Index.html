@@ -260,8 +260,11 @@ var STATE = {
   calYear: new Date().getFullYear(),
   calMonth: new Date().getMonth(),
   bilanSort: { col: null, asc: true },
-  bilanSection: null
+  bilanSection: null,
+  currentRollCall: null
 };
+
+var DEEP_LINK_EVENT = '<?= eventParam ?>';
 
 /* ═══════════════════════════════════════════════════════
    UTILITIES
@@ -403,6 +406,17 @@ function loadJSPData(){
       hideLoader();
       showView('jspView');
       renderJSPView();
+      /* Deep link : ouvrir l'événement si paramètre URL */
+      if(DEEP_LINK_EVENT){
+        var evtId = DEEP_LINK_EVENT;
+        DEEP_LINK_EVENT = '';
+        for(var i=0;i<data.events.length;i++){
+          if(data.events[i].id === evtId){
+            showJSPEventModal(data.events[i].date, [data.events[i]]);
+            break;
+          }
+        }
+      }
     })
     .withFailureHandler(function(e){ hideLoader(); alert('Erreur chargement: '+e.message); })
     .getJSPPageData(STATE.user.login);
@@ -532,6 +546,18 @@ function loadRefData(){
       hideLoader();
       showView('refView');
       renderRefView();
+      /* Deep link : ouvrir l'événement si paramètre URL */
+      if(DEEP_LINK_EVENT){
+        var evtId = DEEP_LINK_EVENT;
+        DEEP_LINK_EVENT = '';
+        for(var i=0;i<data.events.length;i++){
+          if(data.events[i].id === evtId){
+            var evt = data.events[i];
+            showRefDayModal(evt.date, [evt]);
+            break;
+          }
+        }
+      }
     })
     .withFailureHandler(function(e){ hideLoader(); alert('Erreur chargement: '+e.message); })
     .getReferentPageData(STATE.user.login);
@@ -592,7 +618,7 @@ function showRefDayModal(dateStr, events){
       var evtDate = new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
       var today = new Date(); today.setHours(0,0,0,0); evtDate.setHours(0,0,0,0);
       if(evtDate<=today){
-        h += '<button class="modal-btn primary" style="margin-top:10px;" onclick="showAttendance(\''+e.id+'\')">📋 Liste des présents</button>';
+        h += '<button class="modal-btn primary" style="margin-top:10px;" onclick="showAttendance(\''+e.id+'\')">📋 Faire l\'appel</button>';
       }
       h += '<button class="modal-btn danger" style="margin-top:10px;" onclick="confirmDeleteEvent(\''+e.id+'\')">🗑️ Supprimer</button>';
       h += '</div>';
@@ -626,6 +652,7 @@ function showCreateEvent(dateStr){
     h += '<label><input type="checkbox" name="evtSection" value="'+esc(sections[i])+'"> '+esc(sections[i])+'</label>';
   }
   h += '</div></div>';
+  h += '<div class="modal-field" style="display:flex;align-items:center;gap:10px;margin-top:4px;"><input type="checkbox" id="evtNotifyMail" checked style="width:20px;height:20px;accent-color:var(--accent);"><label for="evtNotifyMail" style="margin:0;font-weight:600;font-size:.9em;">📧 Prévenir par mail les JSP et animateurs concernés</label></div>';
   h += '<button class="modal-btn primary" onclick="submitCreateEvent()">✅ Créer</button>';
   h += '<button class="modal-btn secondary" onclick="closeModal()">Annuler</button>';
   openModal(h);
@@ -659,7 +686,8 @@ function submitCreateEvent(){
       heureFin: fin,
       lieu: lieu || 'CIS St Cyprien',
       sections: sections,
-      creePar: STATE.user.login
+      creePar: STATE.user.login,
+      notifyByMail: document.getElementById('evtNotifyMail').checked
     });
 }
 
@@ -687,19 +715,42 @@ function showAttendance(eventId){
 }
 
 function renderAttendanceModal(data){
+  STATE.currentRollCall = data;
   var evt = data.event;
   var jsps = data.jsps;
+  var allSections = data.allSections || [];
   var parts = evt.date.split('-');
   var dateLabel = parseInt(parts[2])+' '+MOIS_NOMS[parseInt(parts[1])-1]+' '+parts[0];
 
   var h = '<button class="modal-close" onclick="closeModal()">✕</button>';
-  h += '<h2>📋 Présences — '+esc(evt.nom)+'</h2>';
-  h += '<p style="color:var(--text-light);margin-bottom:16px;font-size:.9em;">'+dateLabel+' • '+esc(evt.sections.join(', '))+'</p>';
+  h += '<h2>📋 Faire l\'appel — '+esc(evt.nom)+'</h2>';
+  h += '<p style="color:var(--text-light);margin-bottom:16px;font-size:.9em;">'+dateLabel+'</p>';
 
-  h += '<button class="modal-btn primary" onclick="toggleAllPresent(true)" style="margin-bottom:6px;">☑️ Cocher tout</button>';
-  h += '<button class="modal-btn secondary" onclick="toggleAllPresent(false)" style="margin-bottom:12px;">☐ Décocher tout</button>';
+  /* Sélection des sections concernées */
+  if(allSections.length>0){
+    h += '<div class="modal-field"><label>👥 Sections concernées</label><div class="modal-sections">';
+    for(var i=0;i<allSections.length;i++){
+      var checked = evt.sections.indexOf(allSections[i]) !== -1 ? 'checked' : '';
+      h += '<label><input type="checkbox" name="rollCallSection" value="'+esc(allSections[i])+'" '+checked+' onchange="refreshRollCall(\''+evt.id+'\')"> '+esc(allSections[i])+'</label>';
+    }
+    h += '</div></div>';
+  }
 
-  h += '<div class="att-list">';
+  h += '<button class="modal-btn primary" onclick="toggleAllPresent(true)" style="margin-bottom:6px;">☑️ Cocher tout présent</button>';
+  h += '<button class="modal-btn secondary" onclick="toggleAllPresent(false)" style="margin-bottom:12px;">☐ Tout décocher</button>';
+
+  h += '<div id="rollCallList" class="att-list">';
+  h += buildRollCallJSPs(jsps);
+  h += '</div>';
+
+  h += '<button class="modal-btn success" style="margin-top:16px;" onclick="submitAttendance(\''+evt.id+'\')">💾 Enregistrer l\'appel</button>';
+  h += '<button class="modal-btn secondary" style="margin-top:16px;" onclick="closeModal()">Annuler</button>';
+  openModal(h);
+}
+
+function buildRollCallJSPs(jsps){
+  if(!jsps||jsps.length===0) return '<p style="padding:20px;color:var(--text-light);">Aucun JSP dans les sections sélectionnées.</p>';
+  var h = '';
   for(var i=0;i<jsps.length;i++){
     var j = jsps[i];
     var checked = j.present!=='NON' ? 'checked' : '';
@@ -710,11 +761,25 @@ function renderAttendanceModal(data){
     if(j.signale==='OUI') h += '<span class="att-signale" title="Motif: '+esc(j.motif)+'">⚠️ Absence signalée</span>';
     h += '</div>';
   }
-  h += '</div>';
+  return h;
+}
 
-  h += '<button class="modal-btn success" style="margin-top:16px;" onclick="submitAttendance(\''+evt.id+'\')">💾 Enregistrer</button>';
-  h += '<button class="modal-btn secondary" style="margin-top:16px;" onclick="closeModal()">Annuler</button>';
-  openModal(h);
+function refreshRollCall(eventId){
+  var sectionBoxes = document.querySelectorAll('input[name="rollCallSection"]:checked');
+  var sections = [];
+  for(var i=0;i<sectionBoxes.length;i++) sections.push(sectionBoxes[i].value);
+  if(sections.length===0){
+    document.getElementById('rollCallList').innerHTML='<p style="padding:20px;color:var(--text-light);">Sélectionnez au moins une section.</p>';
+    return;
+  }
+  showLoader();
+  google.script.run
+    .withSuccessHandler(function(result){
+      hideLoader();
+      document.getElementById('rollCallList').innerHTML = buildRollCallJSPs(result.jsps);
+    })
+    .withFailureHandler(function(e){ hideLoader(); alert('Erreur: '+e.message); })
+    .refreshRollCallJSPs(eventId, sections);
 }
 
 function toggleAllPresent(state){
@@ -734,10 +799,26 @@ function submitAttendance(eventId){
     });
   }
   showLoader();
-  google.script.run
-    .withSuccessHandler(function(){ closeModal(); loadRefData(); })
-    .withFailureHandler(function(e){ hideLoader(); alert('Erreur : '+e.message); })
-    .saveAttendance(eventId, list);
+  /* Mettre à jour les sections si modifiées */
+  var sectionBoxes = document.querySelectorAll('input[name="rollCallSection"]:checked');
+  if(sectionBoxes.length > 0){
+    var newSections = [];
+    for(var i=0;i<sectionBoxes.length;i++) newSections.push(sectionBoxes[i].value);
+    google.script.run
+      .withSuccessHandler(function(){
+        google.script.run
+          .withSuccessHandler(function(){ closeModal(); loadRefData(); })
+          .withFailureHandler(function(e){ hideLoader(); alert('Erreur : '+e.message); })
+          .saveAttendance(eventId, list);
+      })
+      .withFailureHandler(function(e){ hideLoader(); alert('Erreur : '+e.message); })
+      .updateEventSections(eventId, newSections);
+  } else {
+    google.script.run
+      .withSuccessHandler(function(){ closeModal(); loadRefData(); })
+      .withFailureHandler(function(e){ hideLoader(); alert('Erreur : '+e.message); })
+      .saveAttendance(eventId, list);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════
